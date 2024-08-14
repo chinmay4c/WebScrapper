@@ -1,5 +1,6 @@
 import time
 import csv
+import os
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,6 +16,7 @@ chrome_options.add_argument("--headless")  # Run headless for faster scraping
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.headless = False  # Disable headless mode
 
 service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -23,9 +25,13 @@ driver = webdriver.Chrome(service=service, options=chrome_options)
 def scrape_amazon(query):
     amazon_url = f"https://www.amazon.in/s?k={query}"
     driver.get(amazon_url)
-    
-    # Wait until the products are loaded
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-component-type="s-search-result"]')))
+    try:
+        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-component-type="s-search-result"]')))
+    except TimeoutException:
+        print("Timeout: The element was not found on Amazon's page.")
+        print("Page Source for Debugging:")
+        print(driver.page_source)
+        return [] 
     
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     products = soup.find_all('div', {'data-component-type': 's-search-result'})
@@ -87,24 +93,44 @@ def scrape_myntra(query):
 
 # Function to save data to a CSV file
 def save_to_csv(data, filename):
+    if not data:
+        print(f"No data to save for {filename}")
+        return
+
     keys = data[0].keys()
     with open(filename, 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, fieldnames=keys)
         dict_writer.writeheader()
         dict_writer.writerows(data)
+    print(f"Data successfully saved to {filename}")
+
+# Function to check the content of the CSV file
+def check_csv_content(filename):
+    if not os.path.exists(filename):
+        print(f"Error: {filename} does not exist.")
+        return
+
+    print(f"\nChecking content of {filename}:")
+    with open(filename, 'r') as file:
+        content = file.read()
+        print(content)
 
 # Example usage
 query = 'laptop'
 amazon_data = scrape_amazon(query)
 flipkart_data = scrape_flipkart(query)
-myntra_data = scrape_myntra('t-shirt')  # Different query for Myntra
+myntra_data = scrape_myntra('t-shirt')  
 
-# Save data to CSV files
+
 save_to_csv(amazon_data, 'amazon_products.csv')
 save_to_csv(flipkart_data, 'flipkart_products.csv')
 save_to_csv(myntra_data, 'myntra_products.csv')
 
-# Close the driver
 driver.quit()
 
-print("Scraping complete. Data saved to CSV files.")
+
+check_csv_content('amazon_products.csv')
+check_csv_content('flipkart_products.csv')
+check_csv_content('myntra_products.csv')
+
+print("Scraping complete. Data saved and verified.")
