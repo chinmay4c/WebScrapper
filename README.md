@@ -1,5 +1,3 @@
-Here’s the updated `README.md` with direct installation instructions instead of using a `requirements.txt` file:
-
 ---
 
 # Web Scraper Project
