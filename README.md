@@ -84,6 +84,9 @@ The script will save the scraped data into CSV files named `amazon_products.csv`
 
 You can verify the content of these files by running the script, which will display the contents of the CSV files in the console.
 
+![Output](image.png)
+
+
 ## Troubleshooting
 
 ### Common Issues
